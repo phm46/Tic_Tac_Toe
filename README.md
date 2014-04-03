@@ -11,7 +11,7 @@ HTML Markup
 Use
 ==
 ```js
-$("<div/>").ticTacThis();
+$("#game").ticTacThis();
 ```
 
 Options
