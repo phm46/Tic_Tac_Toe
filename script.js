@@ -1,24 +1,26 @@
 $(document).ready(function() {
     $.fn.ticTacThis = function(json) {
+    	// create board and other html elements
 		var board = $("<canvas/>").css("position","relative")[0];
 		var playerTurnText = $("<p/>");
 		var info = $("<p/>");
 		var optionsDiv = $("<div/>");
-		var saveButton = $("<button>New game</button>");
+		var newGame = $("<button>New game</button>");
 		var inputs = {
 			col: [$("<input type='text' size=2 value=3>"),"Rows (min 3)"],
 			row: [$("<input type='text' size=2 value=3>"),"Columns (min 3)"],
 			boardSize: [$("<input type='text' size=2 value=200>"),"Board Size (min 200, max 1000)"],
 			needForWin: [$("<input type='text' size=2 value=3>"),"Need marks for win (min 3)"]
 		}
-
 		for (var i in inputs){
 			optionsDiv.append(inputs[i][1]+": ").append(inputs[i][0]).append("<br>");
 		}
-		this.html(board).append(info).append(playerTurnText).append(optionsDiv.append(saveButton));
+		this.html(board).append(info).append(playerTurnText).append(optionsDiv.append(newGame));
+
 		var col;
 		var row;
 		var currentPlayer;
+		var gameStop = true;
 		var players;
 		var options;
 		var ctx;
@@ -27,9 +29,10 @@ $(document).ready(function() {
 		var boardArray;
 		var colSize;
 		var rowSize;
-		var initJson;
 		var fgCol = "#000000";
 		var	bgCol = "#ffffff";
+
+		// default values if not defined in init
 		var defaults = {
 			col: 3,
 			row: 3,
@@ -38,7 +41,8 @@ $(document).ready(function() {
 		}
 		init(json);
 
-saveButton.click(function(){
+// newGame button click handler
+newGame.click(function(){
 	var obj={};
 	for(var i in inputs){
 		obj[i] = parseInt(inputs[i][0].val());
@@ -46,9 +50,11 @@ saveButton.click(function(){
 	init(obj);
 });
 
+//fill empty values in user options with defaults
 function mergeOptions(object, defaultObj){
     for (var op in defaultObj) {
-        if (typeof object[op] === "undefined" || !(!!object[op])) {
+    	//if is key not defined in object or it is empty, move default value instead of it
+        if (typeof object[op] === "undefined" || !(!!object[op])) { 
             object[op] = defaultObj[op];
         } else if (typeof defaultObj[op] === "object") {
             mergeOptions(object[op], defaultObj[op]);
@@ -56,15 +62,16 @@ function mergeOptions(object, defaultObj){
     }
 }
 
+// init all variables in game
 function init(json){
-	options = json||initJson;
-	initJson = options;
+	options = json;
 	if(!!options){
     	mergeOptions(json, defaults);
 	} else {
     	options = defaults;
 	}
 	if(validateOptions()){
+		gameStop = false;
 		ctx = board.getContext("2d");
 		board.height = options.boardSize;
 		board.width = options.boardSize;
@@ -82,13 +89,16 @@ function init(json){
 			inputs[i][0].val(options[i]);
 		}
 
+		//shorthand method instead of Math.Floor;
 		currentPlayer = ~~(Math.random()*2+1);
 		for (var i = 0; i<options.row; i++){
+			//create array filled with 0
 			boardArray[i] = Array.apply(null, new Array(options.col)).map(Number.prototype.valueOf,0);
 		}
 		update();
 	} else {
-		alert("Check settings");
+		gameStop = true;
+		alert("Game cannot start. Check your settings.");
 	}
 }
 
@@ -96,6 +106,7 @@ function validateOptions(){
 	return options.col >= options.needForWin && options.row >= options.needForWin && options.needForWin >= 3 && options.boardSize <= 1000 && options.boardSize >= 200;
 }
 
+//draw grid on board
 function drawBoard(){
 	for (var x = 0; x <= options.col; x++){
 		ctx.beginPath();
@@ -114,16 +125,14 @@ function drawBoard(){
 	}
 	for (var x = 0; x < options.row; x++){
 		for (var y = 0; y < options.col; y++){
-			if(boardArray[x][y]==1){
-				drawPlayerMove(y * colSize, x * rowSize, colSize, rowSize, 1);
-			} else if(boardArray[x][y]==2){
-				drawPlayerMove(y * colSize, x * rowSize, colSize, rowSize, 2);
-			}
+			//draw player mark
+			drawPlayerMove(y * colSize, x * rowSize, colSize, rowSize, boardArray[x][y]);
 		}
 	}
 }
 
 function update(){
+	//check for game over
 	if(checkForEnd()){
 		$(info).text("Turn: "+turns+" | "+((winner.nick==1)?"X":"O")+" win").css("font-weight","bold");
 		start = winner.startPos;
@@ -137,6 +146,7 @@ function update(){
 		ctx.closePath();
 		ctx.strokeStyle="#000000";
 		ctx.lineWidth = 1;
+	//check for tie
 	} else if(options.col*options.row==turns){
 		$(info).text("Turn: "+turns+" | Tie").css("font-weight","bold");
 	} else {
@@ -145,6 +155,7 @@ function update(){
 	}
 }
 
+//clear board
 function clearBoard(){
 	ctx.fillStyle = bgCol;
 	ctx.strokeStyle = bgCol;
@@ -155,6 +166,7 @@ function clearBoard(){
 }
 
 function drawPlayerMove(x, y, w, h, player){
+	//draw mark of player X on board
 	if(player==1){
 		ctx.beginPath();
 		ctx.moveTo(x, y);
@@ -167,6 +179,7 @@ function drawPlayerMove(x, y, w, h, player){
 		ctx.lineTo(x, y + h);
 		ctx.stroke();
 		ctx.closePath();
+	//draw mark of player O on board
 	} else if(player==2){
 		drawEllipse(x, y, w, h);
 	}
@@ -191,8 +204,10 @@ function drawEllipse(x, y, w, h) {
 	ctx.stroke();
 }
 
+//handle clicks on board
 function clickHandler(e){
-	if(!!winner.nick==false){
+	//stop listen if is game stoped or it is game over 
+	if(!!winner.nick==false&&!gameStop){
 		var x = posX;
 		var y = posY;
 
@@ -210,11 +225,14 @@ function clickHandler(e){
 				cellY = i;
 			}
 		}
+		//place mark
 		makeMove(cellX, cellY);
-		drawBoard();
+		//update board
+		update();
 	}
 }
 
+//get mouse position on board
 function getMousePos(e){
 	var tmpX;
 	var tmpY;
@@ -268,6 +286,7 @@ function checkForCols(startX,startY){
 	return false;
 }
 
+//left top -> right bottom
 function checkForDiag(startX,startY){
 	var lastMark = boardArray[startY][startX];
 	for (var i = 0; i < options.needForWin; i++){
@@ -285,6 +304,7 @@ function checkForDiag(startX,startY){
 	return false;
 }
 
+//left bottom -> right top
 function checkForAntiDiag(startX,startY){
 	var lastMark = boardArray[startY+options.needForWin-1][startX];
 	for(var i = 0; i < options.needForWin;i++){
@@ -302,6 +322,7 @@ function checkForAntiDiag(startX,startY){
 	return false;
 }
 
+//check scope for rows, cols, diags and anti diags win
 function checkScopeForWin(startX, startY){
 	if(checkForRows(startX,startY)){
 		return true
@@ -322,6 +343,7 @@ function checkScopeForWin(startX, startY){
 	return false;
 }
 
+//create square with size of needForWin
 function checkForEnd() {
 	for(var i = 0; i <= options.col-options.needForWin; i++){
 		for (var j = 0; j <= options.row-options.needForWin; j++) {
@@ -332,6 +354,7 @@ function checkForEnd() {
 	}
 }
 
+//place player mark in text array
 function makeMove(cellX, cellY){
 	if (boardArray[cellY][cellX] == 0){
 		boardArray[cellY][cellX] = currentPlayer;
@@ -342,5 +365,7 @@ function makeMove(cellX, cellY){
 }
 
     }
+
+    //init game
 	$("#tic").ticTacThis();
 });
