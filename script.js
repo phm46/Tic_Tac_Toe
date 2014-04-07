@@ -132,6 +132,7 @@ function drawBoard(){
 }
 
 function update(){
+	clearBoard();
 	//check for game over
 	if(checkForEnd()){
 		$(info).text("Turn: "+turns+" | "+((winner.nick==1)?"X":"O")+" win").css("font-weight","bold");
@@ -151,7 +152,6 @@ function update(){
 		$(info).text("Turn: "+turns+" | Tie").css("font-weight","bold");
 	} else {
 		$(info).text("Turn: "+turns+" | "+((currentPlayer==1)?"X":"O")+"'s turn").css("font-weight","none");
-		clearBoard();
 	}
 }
 
