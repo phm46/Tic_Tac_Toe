@@ -1,6 +1,7 @@
 Description
 ==
 Very simple Tic Tac Toe game
+Online demo: http://jsfiddle.net/GcE2D/
 
 HTML Markup
 ==
